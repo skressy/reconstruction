@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../DPC_viewer"
+		},
+		{
+			"path": "../sn_dust"
+		},
+		{
+			"path": "../dust_model"
+		},
+		{
+			"path": "../fits_plots"
+		}
+	],
+	"settings": {}
+}
