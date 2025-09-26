@@ -251,6 +251,77 @@ def init_recon_3D(u):
     return [bx,by,bz]
 
 #============================================================
+# 2.5D Reconstruction from Stokes U/Q AND Zeeman
+#============================================================
+def zeeman_recon(U, Q, COS2G, BLOS, plotting):
+    nx, ny = U.shape[0], U.shape[0]
+    x = np.linspace(0, 2*np.pi, nx)
+    y = np.linspace(0, 2*np.pi, ny)
+    X, Y = np.meshgrid(x, y, indexing="xy")
+
+    # Step 1. Plane-of-sky orientation from Q,U
+    phi = 0.5 * np.arctan2(U, Q)   # polarization angle
+
+    # Step 2. Field magnitude from cos²γ and Zeeman
+    Bmag = BLOS / np.sqrt(1 - COS2G)
+
+    # Step 3. POS amplitude
+    Bperp = np.sqrt(np.maximum(Bmag**2 - BLOS**2, 0))
+
+    # Step 4. LOS component from Zeeman directly
+    bz = BLOS.copy()
+    
+    # Step 5. Scale bx, by
+    bx = np.sin(phi) * Bperp
+    by = np.cos(phi) * Bperp
+
+    # Total magnitude
+    Btot = np.sqrt(bx**2 + by**2 + bz**2)
+
+    # print(np.max(Btot))
+
+    # Diagnostics / plotting
+    if plotting == 1:
+        fig, ax = plt.subplots(1, 5, figsize=(22,4))
+
+        im0 = ax[0].imshow(bx, origin="lower", cmap="RdBu")
+        ax[0].set_title("Bx map")
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        im1 = ax[1].imshow(by, origin="lower", cmap="RdBu")
+        ax[1].set_title("By map")
+        plt.colorbar(im1, ax=ax[1],fraction=0.046, pad=0.04)
+
+        im2 = ax[2].imshow(bz, origin="lower", cmap="RdBu")
+        ax[2].set_title("Bz map (Zeeman)")
+        plt.colorbar(im2, ax=ax[2],fraction=0.046, pad=0.04)
+
+        im3 = ax[3].imshow(Bmag, origin="lower", cmap="viridis")
+        ax[3].set_title("|B| total magnitude")
+        plt.colorbar(im3, ax=ax[3],fraction=0.046, pad=0.04)
+
+        # Quiver plot: POS field vectors
+        step = 1   # downsample arrows
+        ax[4].imshow(Bperp, origin="lower", cmap="viridis")
+        i = np.arange(0, nx, step)
+        j = np.arange(0, ny, step)
+        ax[4].quiver(j, i, by[::step, ::step], bx[::step, ::step],
+                    color="red", headaxislength=0, headlength=0, headwidth=1, pivot='middle')
+        ax[4].set_title("POS field (bx, by)")
+
+        plt.tight_layout()
+        plt.show()
+
+        # step = 3
+        # rf.visualize_3d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
+        # plt.show()
+
+        # rf.visualize_25d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
+        # plt.show()
+    
+    return bx,by,bz
+
+#============================================================
 # Reconstruct 2.5D U,Q from Bx,By,Bz #### DONT TOUCH!
 #============================================================
 def UQ_reconstruct_2D(bx,by,bz):
@@ -379,10 +450,10 @@ def residual(U_i,Q_i,U_r,Q_r):
 def visualize_3d(bx, by, bz, name, plotdex):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    X, Y, Z = np.meshgrid(np.arange(by.shape[0]),
-                          np.arange(by.shape[0]),
-                          np.arange(by.shape[0]),indexing=plotdex)
-    ax.quiver(X, Y, Z, bx, by,bz, length=0.5, normalize=True, 
+    X, Y, Z = np.meshgrid(np.arange(bz.shape[0]),
+                          np.arange(bz.shape[0]),
+                          np.arange(bz.shape[0]),indexing=plotdex)
+    ax.quiver(X, Y, Z, bx, by, bz, length=0.5, normalize=True, 
             arrow_length_ratio=0, color='dodgerblue')
     ax.set_xlabel('Bx')
     ax.set_ylabel('By')

@@ -88,12 +88,12 @@ def wave_3d_zeeman(amplitude, frequency, box_length, z_contribution, visual, plo
 
     if visual == 1:
         rf.visualize_3d(bx, by, bz, name='Input Wavy Field',plotdex=plotdex)
-        rf.visual_UQ_z(u[:,:,0], q[:,:,0], cos2g[:,:,0],label='Input Wavy Field',plotdex=plotdex)
+        rf.visual_UQ_depol(u[:,:,0], q[:,:,0], cos2g[:,:,0],label='Input Wavy Field',plotdex=plotdex)
     
     UQMAP = [u[:,:,0], q[:,:,0], cos2g[:,:,0]]
     return  UQMAP 
 
-# uqc = wave_3d_z(amplitude=0.5, frequency=1, box_length=8, z_contribution=2, visual=1, plotdex='xy')
+# uqc = wave_3d_zeeman(amplitude=0.5, frequency=1, box_length=8, z_contribution=2, visual=1, plotdex='xy')
 
 # ================================================
 # Generates 3D Toroidal field
@@ -311,7 +311,316 @@ def bz_wavy_field(amplitude, frequency, box_length, y_const, visual, plotdex):
     UQMAP = [u[:,:,0], q[:,:,0], cos2g[:,:,0]]
     return  UQMAP 
 
-bz_wavy_field(amplitude=1, frequency=1, box_length=8, y_const=0, visual=1, plotdex='xy')
+# bz_wavy_field(amplitude=1, frequency=1, box_length=8, y_const=0, visual=1, plotdex='xy')
+
+# ================================================
+# Generates 3D LOS Torodial field
+# ================================================
+def torodial_zeeman_pol(box_length,alpha,plotting):
+
+    x = np.linspace(-1, 1, box_length)
+    y = np.linspace(-1, 1, box_length)
+    z = np.linspace(-1, 1, box_length)
+    X, Y, Z = np.meshgrid(x, y, z, indexing='xy')
+
+    # field geometry - Torodial
+    r = np.sqrt(Y**2 + Z**2) + 1e-5 
+    Bx = np.sin(alpha) 
+    By = (-Z*np.cos(alpha))/r 
+    Bz = (Y*np.cos(alpha))/r  
+
+    # calculate Stokes U/Q/Cos2g
+    cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+    q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+    u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+    phi           = 0.5*np.arctan2(u,q)
+    pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+    los = np.array([0., 0., 1.])   # unit vector; change as desired
+    los = los / np.linalg.norm(los)
+
+    # compute B_parallel field: pointwise dot product
+    B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz
+
+    # integrate or average along LOS axis, along z, the axis to collapse is index 2 (the third axis).
+    B_los_map = np.mean(B_parallel_3d, axis=2)
+
+    # grab first slice of Stokes U/Q/COS2G
+    U = u[:,:,0]
+    Q = q[:,:,0]
+    COS = cos2g[:,:,0]
+
+    if plotting == 1:
+        # Plot B_los_map
+        fig, ax = plt.subplots(1,2, figsize=(8,4))
+        im0 = ax[0].imshow(B_los_map, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax[0].set_title(r'B$_{LOS}$ (z)')
+        ax[0].set_xlabel('x')
+        ax[0].set_ylabel('y')
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        # plot stokes U and Q Map
+        X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+        factor = 1 / np.max(COS)
+
+        phi = 0.5 * np.arctan2(U, Q)
+        x_scaled = np.sin(phi) * COS * factor
+        y_scaled = np.cos(phi) * COS * factor
+
+        ax[1].set_title('Stokes U and Q Map')
+        ax[1].quiver(Y,X,y_scaled,x_scaled,scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+        ax[1].set_xlabel('X')
+        ax[1].set_ylabel('Y')
+
+        plt.tight_layout()
+        plt.show()
+
+        step = 1
+        rf.visualize_3d(Bx, By, Bz, name='Input Wavy Field',plotdex='xy')
+
+    return U, Q, COS, B_los_map, Bx, By, Bz
+
+# u, q, cos, blos, bx, by, bz = torodial_zeeman_pol(box_length=16,alpha=0,plotting=1)
+# print(u, q, cos, blos)
+
+# ==================================================================# ==================================================================
+# ==================================================================# ==================================================================
+# ==================================================================# ==================================================================
+# ========================================================== Work In-Progress ==========================================================
+# ==================================================================# ==================================================================
+# ==================================================================# ==================================================================
+# ==================================================================# ==================================================================
+
+# def check_chatgpt_recon():
+#     # -------------------------------
+#     # Example input arrays
+#     # (replace these with your own Q, U, cos2gamma, Blos maps)
+#     # -------------------------------
+#     nx, ny = 36, 36
+#     x = np.linspace(0, 2*np.pi, nx)
+#     y = np.linspace(0, 2*np.pi, ny)
+#     X, Y = np.meshgrid(x, y, indexing="xy")
+
+#     # Toy model inputs
+#     Q = np.ones((nx, ny))       # constant Q
+#     U = np.zeros((nx, ny))      # constant U → polarization angle = 0
+#     Cos2gamma = np.full((nx, ny), 0.5)   # constant inclination
+#     Blos =  10* np.cos(Y)   # LOS variation only
+
+#     # -------------------------------
+#     # Step 1. Plane-of-sky orientation from Q,U
+#     # -------------------------------
+#     phi = 0.5 * np.arctan2(U, Q)   # polarization angle
+
+#     # -------------------------------
+#     # Step 2. Field magnitude from cos²γ and Zeeman
+#     # cos²γ = (bx^2+by^2)/(bx^2+by^2+bz^2) = (B_pos^2) / (B^2)
+#     # sin²γ = 1 - cos²γ
+#     # cosγ = B_pos/B
+#     # sinγ = B_los/B
+#     # sin²γ = 1 - cos²γ = B_los^2/B^2
+#     # B^2 = B_los^2/1 - cos²γ
+#     # B = B_los/sqrt(1 - cos²γ)
+#     # -------------------------------
+#     Bmag = Blos / np.sqrt(1 - np.clip(Cos2gamma, 1e-6, 1.0))
+
+#     # -------------------------------
+#     # Step 3. POS amplitude
+#     # -------------------------------
+#     Bperp = np.sqrt(np.maximum(Bmag**2 - Blos**2, 0))
+
+#     # -------------------------------
+#     # Step 4. LOS component from Zeeman directly
+#     # -------------------------------
+#     bz = Blos.copy()
+    
+#     # -------------------------------
+#     # Step 5. Scale bx, by
+#     # -------------------------------
+#     bx = np.cos(phi) * Bperp
+#     by = np.sin(phi) * Bperp
+
+#     # -------------------------------
+#     # Diagnostics / plotting
+#     # -------------------------------
+#     fig, ax = plt.subplots(1, 5, figsize=(22,4))
+
+#     im0 = ax[0].imshow(bx, origin="lower", cmap="RdBu")
+#     ax[0].set_title("Bx map")
+#     plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+#     im1 = ax[1].imshow(by, origin="lower", cmap="RdBu")
+#     ax[1].set_title("By map")
+#     plt.colorbar(im1, ax=ax[1],fraction=0.046, pad=0.04)
+
+#     im2 = ax[2].imshow(bz, origin="lower", cmap="RdBu")
+#     ax[2].set_title("Bz map (Zeeman)")
+#     plt.colorbar(im2, ax=ax[2],fraction=0.046, pad=0.04)
+
+#     Btot = np.sqrt(bx**2 + by**2 + bz**2)
+#     im3 = ax[3].imshow(Btot, origin="lower", cmap="viridis")
+#     ax[3].set_title("|B| total magnitude")
+#     plt.colorbar(im3, ax=ax[3],fraction=0.046, pad=0.04)
+
+#     # Quiver plot: POS field vectors
+#     step = 1   # downsample arrows
+#     ax[4].imshow(Btot, origin="lower", cmap="gray")
+#     i = np.arange(0, nx, step)
+#     j = np.arange(0, ny, step)
+#     ax[4].quiver(i, j, bx[::step, ::step], by[::step, ::step],
+#                 color="red", headaxislength=0, headlength=0, headwidth=1, pivot='middle')
+#     ax[4].set_title("POS field (bx, by)")
+
+#     plt.tight_layout()
+#     plt.show()
+
+#     step = 3
+#     rf.visualize_3d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='xy')
+
+# check_chatgpt_recon()
+
+
+
+# # ==================================================================
+# # Generates Synthetic Polarization and Zeeman data for a Wavy Field
+# # ==================================================================
+# def zeeman_wvy(box_length,amplitude,frequency,y_const):
+#     # --------------------------
+#     # parameters / geometry
+#     # --------------------------
+#     x = np.linspace(0, 2*np.pi, box_length)
+#     y = np.linspace(0, 2*np.pi, box_length)
+#     z = np.linspace(0, 2*np.pi, box_length)
+#     X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
+
+#     # field geoemtry - wavy
+#     angle = amplitude * np.cos(frequency * Y)
+#     Bx = np.full_like(X, y_const)      # constant in x
+#     Bz = np.sin(angle)                 # varies with Y
+#     By = np.cos(angle)
+
+#     # calculate Stokes U/Q/Cos2g
+#     cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+#     q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+#     u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+#     phi           = 0.5*np.arctan2(u,q)
+#     pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+#     # --------------------------
+#     # choose observer direction (LOS)
+#     # example: observer along +z (i.e. look down z-axis)
+#     # --------------------------
+#     los = np.array([0., 0., 1.])   # unit vector; change as desired
+#     los = los / np.linalg.norm(los)
+
+#     # compute B_parallel field: pointwise dot product
+#     B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz   # shape (nx,ny,nz)
+
+#     # integrate or average along LOS axis.
+#     # If LOS is along z, the axis to collapse is index 2 (the third axis).
+#     # We detect which axis corresponds to LOS for simplicity: here we assume grid axes are (x,y,z)
+#     # So if los roughly aligns with z, collapse axis=2. For arbitrary LOS you'd sample ray lines.
+#     # For this toy case we'll assume LOS==z and average along axis=2:
+#     B_los_map = np.mean(B_parallel_3d, axis=2)   # shape (nx, ny)
+
+#     # If you want density weighting, replace mean with sum(density * B_parallel)/sum(density)
+
+#     # --------------------------
+#     # Toy spectral line parameters
+#     # --------------------------
+#     nv = 512
+#     v = np.linspace(-5.0, 5.0, nv)   # velocity (or freq) axis in arbitrary units
+#     sigma_v = 0.6                    # line width
+#     I0 = 1.0                         # peak intensity
+
+#     # weak-Zeeman proportionality constant (choose units so signal is visible)
+#     # In real physics this depends on line rest freq and Landé g; here treat as tunable scalar
+#     zeta = 0.2   # (velocity unit per unit B) -- tune to get visible splitting
+
+#     # precompute base line (centered at v=0)
+#     base_line = I0 * np.exp(-0.5 * (v/sigma_v)**2)
+
+#     # allocate output cubes: (nx, ny, nv)
+#     nx, ny = box_length, box_length
+#     I_cube = np.zeros((nx, ny, nv))
+#     V_cube = np.zeros((nx, ny, nv))
+
+#     # loop over sightlines (vectorized approach possible; loop kept clear)
+#     for i in range(nx):
+#         for j in range(ny):
+#             Bbar = B_los_map[i, j]                 # LOS field for that pixel
+#             delta_v = zeta * Bbar                  # shift of sigma units
+#             # Shifted right/left circular polarization profiles:
+#             # RCP shifted to +delta, LCP shifted to -delta (or vice versa depending sign convention)
+#             I_R = I0 * np.exp(-0.5 * ((v - delta_v)/sigma_v)**2)
+#             I_L = I0 * np.exp(-0.5 * ((v + delta_v)/sigma_v)**2)
+#             I = 0.5*(I_R + I_L)
+#             V = I_R - I_L                          # circular pol. difference (Stokes V)
+#             I_cube[i, j] = I
+#             V_cube[i, j] = V
+
+#     # --------------------------
+#     # Add gaussian observational noise (optional)
+#     # --------------------------
+#     noise_rms = 5e-3
+#     rng = np.random.default_rng(42)
+#     V_cube += rng.normal(scale=noise_rms, size=V_cube.shape)
+#     I_cube += rng.normal(scale=noise_rms, size=I_cube.shape)
+
+#     # --------------------------
+#     # Diagnostics: maps you might want
+#     # --------------------------
+#     # peak amplitude of V (signed) maximum circular polarization signal at each picel. Observable = 'Zeeman detection strength"
+#     V_peak = np.max(V_cube, axis=2)   # shape (nx,ny)
+#     # integrated absolute V (a simple proxy) Rough measure of total Polarized signal across line
+#     V_int = np.trapezoid(np.abs(V_cube), x=v, axis=2)
+
+#     # Plot B_los_map
+#     fig, ax = plt.subplots(2,2, figsize=(8,8))
+#     im0 = ax[0,0].imshow(B_los_map.T, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+#     ax[0,0].set_title(r'B$_{LOS}$ (z)')
+#     ax[0,0].set_xlabel('x')
+#     ax[0,0].set_ylabel('y')
+#     plt.colorbar(im0, ax=ax[0,0])
+#     # Plot V_peak
+#     im1 = ax[1,0].imshow(V_peak.T, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+#     ax[1,0].set_title('peak Stokes V')
+#     ax[1,0].set_xlabel('x')
+#     ax[1,0].set_ylabel('y')
+#     plt.colorbar(im1, ax=ax[1,0])
+
+#     # plot sample spectrum at center pixel
+#     i0, j0 = nx//2, ny//2
+#     ax[1,1].plot(v, I_cube[i0, j0], label='I')
+#     ax[1,1].plot(v, V_cube[i0, j0], label='V (x10)')
+#     ax[1,1].plot(v, 10*V_cube[i0, j0], label='10*V')  # scaled so visible
+#     ax[1,1].legend()
+#     ax[1,1].set_title(f'Spectra at pixel ({i0},{j0})')
+
+#     # plot stokes U and Q Map
+#     U = u[:,:,0]
+#     Q = q[:,:,0]
+#     COS = cos2g[:,:,0]
+#     X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+#     factor = 1 / np.max(COS)
+
+#     phi = 0.5 * np.arctan2(U, Q)
+#     x_scaled = np.sin(phi) * COS * factor
+#     y_scaled = np.cos(phi) * COS * factor
+
+#     ax[0,1].set_title('Stokes U and Q Map')
+#     ax[0,1].quiver(X,Y,x_scaled,y_scaled, scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue', alpha=0.7)
+
+#     ax[0,1].set_xlabel('X')
+#     ax[0,1].set_ylabel('Y')
+
+#     plt.tight_layout()
+#     plt.show()
+
+#     return U, Q, COS, B_los_map.T
+
+# # u, q, cos, blos = zeeman_wvy(box_length=16, amplitude=1.2, frequency=2.0, y_const=0.5)
+# # print(u, q, cos, blos)
 # ================================================ # ================================================
 # ================================================ # ================================================
                                     # FUNCTIONS NOT USED BELOW #
