@@ -253,11 +253,14 @@ def init_recon_3D(u):
 #============================================================
 # 2.5D Reconstruction from Stokes U/Q AND Zeeman
 #============================================================
-def zeeman_recon(U, Q, COS2G, BLOS, plotting):
+def zeeman_recon(u, plotting):
+    # U, Q, COS2G, BLOS, plotting
+    U     = u[0]
+    Q     = u[1]
+    COS2G = u[2]
+    BLOS  = u[2]
+
     nx, ny = U.shape[0], U.shape[0]
-    x = np.linspace(0, 2*np.pi, nx)
-    y = np.linspace(0, 2*np.pi, ny)
-    X, Y = np.meshgrid(x, y, indexing="xy")
 
     # Step 1. Plane-of-sky orientation from Q,U
     phi = 0.5 * np.arctan2(U, Q)   # polarization angle
@@ -319,7 +322,7 @@ def zeeman_recon(U, Q, COS2G, BLOS, plotting):
         # rf.visualize_25d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
         # plt.show()
     
-    return bx,by,bz
+    return [bx,by,bz]
 
 #============================================================
 # Reconstruct 2.5D U,Q from Bx,By,Bz #### DONT TOUCH!

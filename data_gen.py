@@ -383,6 +383,144 @@ def torodial_zeeman_pol(box_length,alpha,plotting):
 # u, q, cos, blos, bx, by, bz = torodial_zeeman_pol(box_length=16,alpha=0,plotting=1)
 # print(u, q, cos, blos)
 
+# ZEEMAN ONLY BELOW
+
+# ================================================
+# Generates polarization AND Zeeman maps
+# ================================================
+def wavy_zeeman_pol(box_length,amplitude,frequency,x_const,plotting):
+
+    x = np.linspace(0, 2*np.pi, box_length)
+    y = np.linspace(0, 2*np.pi, box_length)
+    z = np.linspace(0, 2*np.pi, box_length)
+    X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
+
+    # field geoemtry - wavy
+    angle = amplitude * np.cos(frequency * Y)
+    Bx = np.full_like(X, x_const)      
+    Bz = np.sin(angle)                 
+    By = np.cos(angle)
+
+    # calculate Stokes U/Q/Cos2g
+    cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+    q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+    u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+    phi           = 0.5*np.arctan2(u,q)
+    pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+    los = np.array([0., 0., 1.])   # unit vector; change as desired
+    los = los / np.linalg.norm(los)
+
+    # compute B_parallel field: pointwise dot product
+    B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz
+
+    # integrate or average along LOS axis, along z, the axis to collapse is index 2 (the third axis).
+    B_los_map = np.mean(B_parallel_3d, axis=2)
+
+    # grab first slice of Stokes U/Q/COS2G
+    U = u[:,:,0]
+    Q = q[:,:,0]
+    COS = cos2g[:,:,0]
+
+    if plotting == 1:
+        # Plot B_los_map
+        fig, ax = plt.subplots(1,2, figsize=(8,4))
+        im0 = ax[0].imshow(B_los_map, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax[0].set_title(r'B$_{LOS}$ (z)')
+        ax[0].set_xlabel('x')
+        ax[0].set_ylabel('y')
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        # plot stokes U and Q Map
+        X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+        factor = 1 / np.max(COS)
+
+        phi = 0.5 * np.arctan2(U, Q)
+        x_scaled = np.sin(phi) * COS * factor
+        y_scaled = np.cos(phi) * COS * factor
+
+        ax[1].set_title('Stokes U and Q Map')
+        ax[1].quiver(Y,X,y_scaled,x_scaled,scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+        ax[1].set_xlabel('X')
+        ax[1].set_ylabel('Y')
+
+        plt.tight_layout()
+        plt.show()
+
+        # step = 3
+        # rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='xy')
+
+    return U, Q, COS, B_los_map, Bx, By, Bz
+
+# ================================================
+# Generates polarization AND Zeeman maps with FEW Zeeman measurements (to create realisitic observations)
+# ================================================
+def wavy_zeeman_pol_min(box_length,amplitude,frequency,x_const,num_measurements,plotting):
+    nz = num_measurements
+
+    x = np.linspace(0, 2*np.pi, box_length)
+    y = np.linspace(0, 2*np.pi, box_length)
+    z = np.linspace(0, 2*np.pi, box_length)
+    X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
+
+    # field geoemtry - wavy
+    angle = amplitude * np.cos(frequency * Y)
+    Bx = np.full_like(X, x_const)      
+    Bz = np.sin(angle)                 
+    By = np.cos(angle)
+
+    # calculate Stokes U/Q/Cos2g
+    cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+    q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+    u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+    phi           = 0.5*np.arctan2(u,q)
+    pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+    los = np.array([0., 0., 1.])   # unit vector; change as desired
+    los = los / np.linalg.norm(los)
+
+    # compute B_parallel field: pointwise dot product
+    B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz
+
+    # integrate or average along LOS axis, along z, the axis to collapse is index 2 (the third axis).
+    B_los_map = np.mean(B_parallel_3d, axis=2)
+
+    # grab first slice of Stokes U/Q/COS2G
+    U = u[:,:,0]
+    Q = q[:,:,0]
+    COS = cos2g[:,:,0]
+
+    if plotting == 1:
+        # Plot B_los_map
+        fig, ax = plt.subplots(1,2, figsize=(8,4))
+        im0 = ax[0].imshow(B_los_map, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax[0].set_title(r'B$_{LOS}$ (z)')
+        ax[0].set_xlabel('x')
+        ax[0].set_ylabel('y')
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        # plot stokes U and Q Map
+        X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+        factor = 1 / np.max(COS)
+
+        phi = 0.5 * np.arctan2(U, Q)
+        x_scaled = np.sin(phi) * COS * factor
+        y_scaled = np.cos(phi) * COS * factor
+
+        ax[1].set_title('Stokes U and Q Map')
+        ax[1].quiver(Y,X,y_scaled,x_scaled,scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+        ax[1].set_xlabel('X')
+        ax[1].set_ylabel('Y')
+
+        plt.tight_layout()
+        plt.show()
+
+        # step = 3
+        # rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='xy')
+    return U, Q, COS, B_los_map[:nz,:nz], Bx, By, Bz
+
+
+
 # ==================================================================# ==================================================================
 # ==================================================================# ==================================================================
 # ==================================================================# ==================================================================
