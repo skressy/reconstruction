@@ -5,6 +5,7 @@ from scipy.optimize import curve_fit
 from scipy.optimize import root_scalar
 from scipy.integrate import quad
 from scipy.ndimage import convolve
+import more_functions as mf
 # from Reconstruction import multigrid
 
 # a place to put all functions for reconstruction script (that for the most part are finished)
@@ -138,15 +139,54 @@ def prolong_3D(u):
 #============================================================
 def restrict(u):
     J     = u[0][0].shape[0]
+    JZ     = u[-1][0].shape[0]
     print('Restricting... Level = ', J)
-    i,j   = np.meshgrid(np.arange(J//2),np.arange(J//2),indexing='xy')
-    uc0    = 0.25*(u[0][2*i,2*j]+u[0][2*i,2*j+1]+u[0][2*i+1,2*j]+u[0][2*i+1,2*j+1])
-    uc1    = 0.25*(u[1][2*i,2*j]+u[1][2*i,2*j+1]+u[1][2*i+1,2*j]+u[1][2*i+1,2*j+1])
-    uc2    = 0.25*(u[2][2*i,2*j]+u[2][2*i,2*j+1]+u[2][2*i+1,2*j]+u[2][2*i+1,2*j+1])
-    uc     = [uc0,uc1,uc2]
+    if np.shape(u[0]) != np.shape(u[-1]):
+        i,j   = np.meshgrid(np.arange(J//2),np.arange(J//2),indexing='xy')
+        k,l   = np.meshgrid(np.arange(JZ//2),np.arange(JZ//2),indexing='xy')
+        uc0    = 0.25*(u[0][2*i,2*j]+u[0][2*i,2*j+1]+u[0][2*i+1,2*j]+u[0][2*i+1,2*j+1])
+        uc1    = 0.25*(u[1][2*i,2*j]+u[1][2*i,2*j+1]+u[1][2*i+1,2*j]+u[1][2*i+1,2*j+1])
+        uc2    = 0.25*(u[2][2*i,2*j]+u[2][2*i,2*j+1]+u[2][2*i+1,2*j]+u[2][2*i+1,2*j+1])
+
+        uc3    = 0.25*(u[3][2*k,2*l]+u[3][2*k,2*l+1]+u[3][2*k+1,2*l]+u[3][2*k+1,2*l+1])
+        uc     = [uc0,uc1,uc2,uc3]
+    else:
+        i,j   = np.meshgrid(np.arange(J//2),np.arange(J//2),indexing='xy')
+        uc0    = 0.25*(u[0][2*i,2*j]+u[0][2*i,2*j+1]+u[0][2*i+1,2*j]+u[0][2*i+1,2*j+1])
+        uc1    = 0.25*(u[1][2*i,2*j]+u[1][2*i,2*j+1]+u[1][2*i+1,2*j]+u[1][2*i+1,2*j+1])
+        uc2    = 0.25*(u[2][2*i,2*j]+u[2][2*i,2*j+1]+u[2][2*i+1,2*j]+u[2][2*i+1,2*j+1])
+        uc3    = 0.25*(u[3][2*i,2*j]+u[3][2*i,2*j+1]+u[3][2*i+1,2*j]+u[3][2*i+1,2*j+1])
+        uc     = [uc0,uc1,uc2,uc3]
 
     return uc
 
+def restrict_zeeman_min(u):
+    J     = u[0].shape[0]
+    JZ    = u[-1].shape[0]
+    print('Restricting... Level = ', J)
+    # print('Restricting... Level = ', JZ)
+    if np.shape(u[0]) != np.shape(u[-1]):
+        i,j   = np.meshgrid(np.arange(J//2),np.arange(J//2),indexing='xy')
+        k,l   = np.meshgrid(np.arange(JZ//2),np.arange(JZ//2),indexing='xy')
+        uc0    = 0.25*(u[0][2*i,2*j]+u[0][2*i,2*j+1]+u[0][2*i+1,2*j]+u[0][2*i+1,2*j+1])
+        uc1    = 0.25*(u[1][2*i,2*j]+u[1][2*i,2*j+1]+u[1][2*i+1,2*j]+u[1][2*i+1,2*j+1])
+        uc2    = 0.25*(u[2][2*i,2*j]+u[2][2*i,2*j+1]+u[2][2*i+1,2*j]+u[2][2*i+1,2*j+1])
+
+        if JZ > 1:
+            uc3    = 0.25*(u[3][2*k,2*l]+u[3][2*k,2*l+1]+u[3][2*k+1,2*l]+u[3][2*k+1,2*l+1])
+        else:
+            uc3 = u[3]
+        
+        uc     = [uc0,uc1,uc2,uc3]
+    else:
+        i,j   = np.meshgrid(np.arange(J//2),np.arange(J//2),indexing='xy')
+        uc0    = 0.25*(u[0][2*i,2*j]+u[0][2*i,2*j+1]+u[0][2*i+1,2*j]+u[0][2*i+1,2*j+1])
+        uc1    = 0.25*(u[1][2*i,2*j]+u[1][2*i,2*j+1]+u[1][2*i+1,2*j]+u[1][2*i+1,2*j+1])
+        uc2    = 0.25*(u[2][2*i,2*j]+u[2][2*i,2*j+1]+u[2][2*i+1,2*j]+u[2][2*i+1,2*j+1])
+        uc3    = 0.25*(u[3][2*i,2*j]+u[3][2*i,2*j+1]+u[3][2*i+1,2*j]+u[3][2*i+1,2*j+1])
+        uc     = [uc0,uc1,uc2,uc3]
+
+    return uc
 #============================================================
 # Initial Reconstruction 2.5D from Stokes U/Q ### DONT TOUCH!
 #============================================================
@@ -258,7 +298,9 @@ def zeeman_recon(u, plotting):
     U     = u[0]
     Q     = u[1]
     COS2G = u[2]
-    BLOS  = u[2]
+    BLOS  = u[3]
+
+    print(np.shape(U), np.shape(Q))
 
     nx, ny = U.shape[0], U.shape[0]
 
@@ -322,6 +364,276 @@ def zeeman_recon(u, plotting):
         # rf.visualize_25d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
         # plt.show()
     
+    return [bx,by,bz]
+
+# #============================================================
+# # OLD 2.5D Reconstruction from Stokes U/Q AND Zeeman
+# #============================================================
+# def zeeman_recon_min_2D(u, plotting):
+#     # U, Q, COS2G, BLOS, plotting
+#     U     = u[0]
+#     Q     = u[1]
+#     COS2G = u[2]
+#     BLOS  = u[3]
+#     nBLOS = np.zeros((U.shape[0],U.shape[0]))
+
+#     print(np.shape(U), np.shape(Q))
+
+#     nx, ny = U.shape[0], U.shape[1]
+
+#     if U.shape[0] > 1:
+#         for i in range(nx):
+#             for j in range(ny):
+#                 ifrac = i/nx
+#                 jfrac = j/ny
+#                 iblos = int(ifrac*np.shape(BLOS)[0])
+#                 jblos = int(jfrac*np.shape(BLOS)[1])
+#                 if BLOS.shape[0] > 1:
+#                     nBLOS[i,j] = BLOS[iblos,jblos]
+#                 else:
+#                     nBLOS[i,j] = BLOS[0][0]
+    
+#     else:
+#         nBLOS = BLOS
+    
+#     print('U', np.shape(U), 'BLOS:', np.shape(nBLOS))
+
+#     # Step 1. Plane-of-sky orientation from Q,U
+#     phi = 0.5 * np.arctan2(U, Q)   # polarization angle
+
+#     # Step 2. Field magnitude from cos²γ and Zeeman
+#     Bmag = nBLOS / np.sqrt(1 - COS2G)
+
+#     # Step 3. POS amplitude
+#     Bperp = np.sqrt(np.maximum(Bmag**2 - nBLOS**2, 0))
+
+#     # Step 4. LOS component from Zeeman directly
+#     bz = nBLOS.copy()
+    
+#     # Step 5. Scale bx, by
+#     bx = np.sin(phi) * Bperp
+#     by = np.cos(phi) * Bperp
+
+#     # Total magnitude
+#     Btot = np.sqrt(bx**2 + by**2 + bz**2)
+
+#     # print(np.max(Btot))
+
+#     # Diagnostics / plotting
+#     if plotting == 1:
+#         fig, ax = plt.subplots(1, 5, figsize=(22,4))
+
+#         im0 = ax[0].imshow(bx, origin="lower", cmap="RdBu")
+#         ax[0].set_title("Bx map")
+#         plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+#         im1 = ax[1].imshow(by, origin="lower", cmap="RdBu")
+#         ax[1].set_title("By map")
+#         plt.colorbar(im1, ax=ax[1],fraction=0.046, pad=0.04)
+
+#         im2 = ax[2].imshow(bz, origin="lower", cmap="RdBu")
+#         ax[2].set_title("Bz map (Zeeman)")
+#         plt.colorbar(im2, ax=ax[2],fraction=0.046, pad=0.04)
+
+#         im3 = ax[3].imshow(Bmag, origin="lower", cmap="viridis")
+#         ax[3].set_title("|B| total magnitude")
+#         plt.colorbar(im3, ax=ax[3],fraction=0.046, pad=0.04)
+
+#         # Quiver plot: POS field vectors
+#         step = 1   # downsample arrows
+#         ax[4].imshow(Bperp, origin="lower", cmap="viridis")
+#         i = np.arange(0, nx, step)
+#         j = np.arange(0, ny, step)
+#         ax[4].quiver(j, i, by[::step, ::step],bx[::step, ::step],
+#                     color="red", headaxislength=0, headlength=0, headwidth=1, pivot='middle')
+#         ax[4].set_title("POS field (bx, by)")
+
+#         plt.tight_layout()
+#         plt.show()
+
+#         # step = 3
+#         # rf.visualize_3d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
+#         # plt.show()
+
+#         # rf.visualize_25d(bx[::step, ::step], by[::step, ::step], bz[::step, ::step], name='Input Wavy Field',plotdex='ij')
+#         # plt.show()
+    
+#     return [bx,by,bz]
+
+#============================================================
+# 2.5D Reconstruction from Stokes U/Q AND Zeeman
+#============================================================
+def zeeman_recon_min_2D(u, plotting, near_neighbor):
+    # U, Q, COS2G, BLOS, plotting
+    U     = u[0]
+    Q     = u[1]
+    COS2G = u[2]
+    BLOS  = u[3]
+
+    plt.imshow(BLOS, origin="lower", cmap="viridis")
+    print('num. of BLOS values', len(np.where(BLOS != -1)))
+    print('SHAPE BLOS', np.shape(BLOS), 'SHAPE U', np.shape(U))
+
+    # First, check to see if we have any BLOS values at all
+    num_BLOS_values = len(np.where(BLOS != -1)[0])
+    if num_BLOS_values == 0:
+        print('No BLOS values found, performing pure polarimetric reconstruction')
+        bx, by, bz = mf.precon(U, Q, COS2G)
+    
+    else:
+        print('BLOS values found, performing Zeeman + polarimetric reconstruction')
+
+        # if near_neighbor is True, we will fill in missing BLOS values with nearest neighbor
+        if near_neighbor == True:
+            nx, ny = U.shape[0], U.shape[1]
+            new_BLOS = np.zeros((nx, ny))
+            # For levels larger than 1 cell
+            if BLOS.shape[0] > 1:
+                for i in range(nx):
+                    for j in range(ny):
+                        # For each cell, find nearest BLOS value that isn't -1, assign to new_BLOS array
+                        # so that each cell has some BLOS value. 
+                        index = mf.nearest_non_minus_one(BLOS, (i,j), allow_diagonals=False)
+                        new_BLOS[i,j] = BLOS[index]
+            # 1 cell lvl
+            else:
+                new_BLOS = BLOS
+            # Reconstruct Bx, By, Bz with new BLOS array
+            bx, by, bz = mf.zrecon(U, Q, new_BLOS, COS2G)
+        
+        # If near_neighbor is False, only reconstruct where we have BLOS values. Otherwise, use polarimetric only.
+        if near_neighbor == False:
+            
+            nx, ny = U.shape[0], U.shape[1]
+            bx = np.zeros((nx,ny))
+            by = np.zeros((nx,ny))
+            bz = np.zeros((nx,ny))
+            # For levels larger than 1 cell
+            if BLOS.shape[0] > 1:
+                # have to step thru each cell, and reconstruct based on BLOS information available
+                for i in range(nx):
+                    for j in range(ny):
+                        if BLOS[i][j] != -1:
+                            BX, BY, BZ = mf.zrecon(U[i][j], Q[i][j], BLOS[i][j], COS2G[i][j])
+                            bx[i][j] = BX
+                            by[i][j] = BY
+                            bz[i][j] = BZ
+                        else:
+                            BX, BY, BZ = mf.precon(U[i][j], Q[i][j], COS2G[i][j])
+                            bx[i][j] = BX
+                            by[i][j] = BY
+                            bz[i][j] = BZ
+
+    # Diagnostics / plotting
+    if plotting == 1:
+        fig, ax = plt.subplots(1, 4, figsize=(22,4))
+
+        im0 = ax[0].imshow(bx, origin="lower", cmap="RdBu")
+        ax[0].set_title("Bx map")
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        im1 = ax[1].imshow(by, origin="lower", cmap="RdBu")
+        ax[1].set_title("By map")
+        plt.colorbar(im1, ax=ax[1],fraction=0.046, pad=0.04)
+
+        im2 = ax[2].imshow(bz, origin="lower", cmap="RdBu")
+        ax[2].set_title("Bz map (Zeeman)")
+        plt.colorbar(im2, ax=ax[2],fraction=0.046, pad=0.04)
+
+        # Quiver plot: POS field vectors
+        step = 1   # downsample arrows
+        ax[3].imshow(bz, origin="lower", cmap="viridis")
+        i = np.arange(0, nx, step)
+        j = np.arange(0, ny, step)
+        ax[3].quiver(j, i, by[::step, ::step],bx[::step, ::step],
+                    color="red", headaxislength=0, headlength=0, headwidth=1, pivot='middle')
+        ax[3].set_title("POS field (bx, by)")
+
+        plt.tight_layout()
+        plt.show()
+    
+    return [bx,by,bz]
+
+#######################################
+def zeeman_recon_min_3D(u): 
+    # This code is not generic and can't work with 2.5D Zeeman reconstruction, need to incorporate both at some point.
+    U     = u[0]
+    Q     = u[1]
+    COS2G = u[2]
+    BLOS  = u[3]
+    nBLOS = np.zeros((U.shape[0],U.shape[0]))
+    print('new blos array size', np.shape(nBLOS))
+
+    # need to grab closest BLOS value, not necessarily have information in each cell.
+    # calculates fraction of index of i,j and then populates the new BLOS array with 
+    # respective information. This way, BLOS array is the same size as U/Q/COS2G, and
+    # BLOS information is extrapolated and smoothed. 
+    if U.shape[0] > 1:
+        for i in range(U.shape[0]):
+            for j in range(U.shape[1]):
+                ifrac = i/np.shape(U)[0]
+                jfrac = j/np.shape(U)[1]
+                iblos = int(ifrac*np.shape(BLOS)[0])
+                jblos = int(jfrac*np.shape(BLOS)[1])
+                if BLOS.shape[0] > 1:
+                    nBLOS[i,j] = BLOS[iblos,jblos]
+                else:
+                    # print('BLOS value',BLOS[0][0])
+                    nBLOS[i,j] = BLOS[0][0]
+        # print('BLOS size', BLOS.shape[0])
+    
+    else:
+        nBLOS = BLOS
+    
+    print('U', np.shape(U), 'BLOS:', np.shape(nBLOS))
+
+    if U.shape[0] != U.shape[1]:
+        print('Input field is not square')
+        return
+
+    bx = np.zeros((U.shape[0],U.shape[0],U.shape[0]))
+    by = np.zeros((U.shape[0],U.shape[0],U.shape[0]))
+    bz = np.zeros((U.shape[0],U.shape[0],U.shape[0]))
+
+    # for each cell in the 2D map
+    for i in range(U.shape[0]):
+        for j in range(U.shape[1]):
+            for n in range(bx.shape[0]):
+
+                iQ        = Q[i][j]
+                iU        = U[i][j]
+                iCOS2G    = COS2G[i][j]
+                iBLOS     = nBLOS[i][j]
+
+                # Step 1. Plane-of-sky orientation from Q,U
+                iphi = 0.5 * np.arctan2(iU, iQ)   # polarization angle
+
+                # Step 2. Field magnitude from cos²γ and Zeeman
+                Bmag = iBLOS / np.sqrt(1 - iCOS2G)
+
+                # Step 3. POS amplitude
+                Bperp = np.sqrt(np.maximum(Bmag**2 - iBLOS**2, 0))
+
+                # Step 4. LOS component from Zeeman directly
+                ibz = iBLOS.copy()
+                
+                # Step 5. Scale bx, by
+                ibx = np.sin(iphi) * Bperp
+                iby = np.cos(iphi) * Bperp
+
+                # Total magnitude
+                Btot = np.sqrt(bx**2 + by**2 + bz**2)
+                #save
+                # print('iPHI = ', iphi)
+
+                # print('iBX = ', ibx)
+    
+                bx[i][j][n] = ibx
+                by[i][j][n] = iby
+                bz[i][j][n] = ibz
+    
+    # print('BTOT:', np.shape(Btot))
+
     return [bx,by,bz]
 
 #============================================================
@@ -510,8 +822,8 @@ def visual_UQ(U,Q,label,plotdex):
     ax.set_title(label)
     X, Y = np.meshgrid(np.arange(U.shape[0]), np.arange(Q.shape[0]),indexing=plotdex)
     phi = 0.5*np.arctan2(U,Q)
-    x = np.sin(phi)
-    y = np.cos(phi)
+    x = np.cos(phi)
+    y = np.sin(phi)
     ax.quiver(X, Y, x, y, headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
@@ -533,7 +845,7 @@ def visual_UQ_depol(U,Q,pol,label,plotdex):
     ax = fig.add_subplot()
     ax.set_title(label)
     # Plot scaled vectors in blue
-    ax.quiver(X,Y,x_scaled,y_scaled, scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue', alpha=0.7)
+    ax.quiver(Y,X,y_scaled,x_scaled, scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue', alpha=0.7)
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')

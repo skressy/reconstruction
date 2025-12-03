@@ -5,6 +5,7 @@ import pyvista as pv
 from mpl_toolkits.mplot3d import Axes3D
 import recon_funcs as rf
 from scipy.special import jn_zeros, j0, j1, erfc
+import random
 
 # ================================================
 # Generates 3D Uniform Field
@@ -453,9 +454,10 @@ def wavy_zeeman_pol(box_length,amplitude,frequency,x_const,plotting):
     return U, Q, COS, B_los_map, Bx, By, Bz
 
 # ================================================
-# Generates polarization AND Zeeman maps with FEW Zeeman measurements (to create realisitic observations)
+# Generates polarization AND Zeeman maps with FEW constant Zeeman measurements (to create realisitic observations)
 # ================================================
 def wavy_zeeman_pol_min(box_length,amplitude,frequency,x_const,num_measurements,plotting):
+    
     nz = num_measurements
 
     x = np.linspace(0, 2*np.pi, box_length)
@@ -464,10 +466,15 @@ def wavy_zeeman_pol_min(box_length,amplitude,frequency,x_const,num_measurements,
     X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
 
     # field geoemtry - wavy
-    angle = amplitude * np.cos(frequency * Y)
-    Bx = np.full_like(X, x_const)      
-    Bz = np.sin(angle)                 
+    # angle = amplitude * np.cos(frequency * Y)
+    # Bx = np.full_like(X, x_const)      
+    # Bz = np.sin(angle)                 
+    # By = np.cos(angle)
+
+    angle = amplitude * np.cos(frequency * X)
+    Bx = np.sin(angle)
     By = np.cos(angle)
+    Bz = np.full_like(X, x_const)  # fill z space with zeros
 
     # calculate Stokes U/Q/Cos2g
     cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
@@ -515,10 +522,212 @@ def wavy_zeeman_pol_min(box_length,amplitude,frequency,x_const,num_measurements,
         plt.tight_layout()
         plt.show()
 
-        # step = 3
-        # rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='xy')
+        step = 2
+        rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='ij')
     return U, Q, COS, B_los_map[:nz,:nz], Bx, By, Bz
 
+# U, Q, COS, B_los_map, Bx, By, Bz = wavy_zeeman_pol_min(box_length=16,amplitude=1.2,frequency=1,x_const=0.2,num_measurements=4,plotting=1)
+
+
+# # ================================================================
+# # Generates polarization AND Zeeman maps with FEW 
+# # VARIABLE Zeeman measurements (to create realisitic observations)
+# # ================================================================
+# def wavy_zeeman_pol_min_vary(box_length,amplitude,frequency,z_vals, num_measurements,plotting):
+    
+#     nz = num_measurements
+
+#     x = np.linspace(0, 2*np.pi, box_length)
+#     y = np.linspace(0, 2*np.pi, box_length)
+#     z = np.linspace(0, 2*np.pi, box_length)
+#     X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
+
+#     angle = amplitude * np.cos(frequency * X)
+#     Bx = np.sin(angle)
+#     By = np.cos(angle)
+#     Bz = np.full_like(X, fill_value=0)  # fill z space with zeros
+
+#     Bz[0:int(0.5*box_length),0:int(0.5*box_length),:] = z_vals[0]
+#     Bz[int(0.5*box_length):,0:int(0.5*box_length),:] = z_vals[1]
+#     Bz[int(0.5*box_length):,int(0.5*box_length):,:] = z_vals[2]
+#     Bz[0:int(0.5*box_length),int(0.5*box_length):,:] = z_vals[3]
+
+#     print(np.shape(Bz))
+
+#     if plotting == 1:
+#         fig, ax = plt.subplots(1,1, figsize=(4,4))
+#         im = ax.imshow(Bz[:,:,0], origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+#         ax.set_title(r'B$_z$')
+#         plt.colorbar(im, ax=ax,fraction=0.046, pad=0.04)
+#         plt.show()
+
+#     # calculate Stokes U/Q/Cos2g
+#     cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+#     q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+#     u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+#     phi           = 0.5*np.arctan2(u,q)
+#     pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+#     los = np.array([0., 0., 1.])   # unit vector; change as desired
+#     los = los / np.linalg.norm(los)
+
+#     # compute B_parallel field: pointwise dot product
+#     B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz
+
+#     # integrate or average along LOS axis, along z, the axis to collapse is index 2 (the third axis).
+#     B_los_map = np.mean(B_parallel_3d, axis=2)
+
+#     # grab first slice of Stokes U/Q/COS2G
+#     U = u[:,:,0]
+#     Q = q[:,:,0]
+#     COS = cos2g[:,:,0]
+
+
+#     # # create array full of markers (-1) to say no Zeeman measurement here!
+#     # minBLOS = np.full_like(BLOS, fill_value=-1)
+
+#     # # For some user-specified number of zeeman measurements, fill in minBLOS based on BLOS
+#     # for it in range(n_zs):
+#     #     rand_i = np.random(nx)
+#     #     rand_j = np.random(ny)
+#     #     minBLOS[rand_i][rand_j] = BLOS[rand_i][rand_j]
+
+#     if plotting == 1:
+#         # Plot B_los_map
+#         fig, ax = plt.subplots(1,2, figsize=(8,4))
+#         im0 = ax[0].imshow(B_los_map, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+#         ax[0].set_title(r'B$_{LOS}$ (z)')
+#         ax[0].set_xlabel('x')
+#         ax[0].set_ylabel('y')
+#         plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+#         # plot stokes U and Q Map
+#         X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+#         factor = 1 / np.max(COS)
+
+#         phi = 0.5 * np.arctan2(U, Q)
+#         x_scaled = np.sin(phi) * COS * factor
+#         y_scaled = np.cos(phi) * COS * factor
+
+#         ax[1].set_title('Stokes U and Q Map')
+#         ax[1].quiver(Y,X,y_scaled,x_scaled,scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+#         ax[1].set_xlabel('X')
+#         ax[1].set_ylabel('Y')
+
+#         plt.tight_layout()
+#         plt.show()
+
+#         step = 2
+#         rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='ij')
+#     return U, Q, COS, B_los_map[:nz,:nz], Bx, By, Bz
+
+# U, Q, COS, B_los_map, Bx, By, Bz = wavy_zeeman_pol_min_vary(box_length=16,amplitude=1.2,frequency=1,z_vals=[1,2,3,4],num_measurements=4,plotting=1)
+
+# ================================================================
+# Generates polarization AND Zeeman maps with FEW 
+# VARIABLE Zeeman measurements (to create realisitic observations)
+# ================================================================
+def wavy_zeeman_pol_min_vary(box_length,amplitude,frequency,z_vals, nz, plotting):
+    
+    x = np.linspace(0, 2*np.pi, box_length)
+    y = np.linspace(0, 2*np.pi, box_length)
+    z = np.linspace(0, 2*np.pi, box_length)
+    X, Y, Z = np.meshgrid(x, y, z, indexing="xy")
+
+    # Bx, By Geometry
+    angle = amplitude * np.cos(frequency * X)
+    Bx = np.sin(angle)
+    By = np.cos(angle)
+
+    # Bz Geometry
+    Bz = np.full_like(X, fill_value=0)  # fill z space with zeros
+    Bz[0:int(0.5*box_length),0:int(0.5*box_length),:] = z_vals[0]
+    Bz[int(0.5*box_length):,0:int(0.5*box_length),:] = z_vals[1]
+    Bz[int(0.5*box_length):,int(0.5*box_length):,:] = z_vals[2]
+    Bz[0:int(0.5*box_length),int(0.5*box_length):,:] = z_vals[3]
+
+    # plot a slice of Bz to verify
+    if plotting == 1:
+        fig, ax = plt.subplots(1,1, figsize=(4,4))
+        im = ax.imshow(Bz[:,:,0], origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax.set_title(r'B$_z$')
+        plt.colorbar(im, ax=ax,fraction=0.046, pad=0.04)
+        plt.show()
+
+    # calculate Stokes U/Q/Cos2g
+    cos2g         = (Bx**2+By**2)/(Bx**2+By**2+Bz**2)
+    q             = (By**2-Bx**2)/(Bx**2+By**2) * cos2g
+    u             = 2*Bx*By/(Bx**2+By**2) * cos2g
+    phi           = 0.5*np.arctan2(u,q)
+    pol           = np.sqrt(u**2+q**2) # which is the same as cos2g in this approach
+
+    los = np.array([0., 0., 1.])   # unit vector; change as desired
+    los = los / np.linalg.norm(los)
+
+    # compute B_parallel field: pointwise dot product
+    B_parallel_3d = los[0]*Bx + los[1]*By + los[2]*Bz
+
+    # integrate or average along LOS axis, along z, the axis to collapse is index 2 (the third axis).
+    B_los_map = np.mean(B_parallel_3d, axis=2)
+
+    # grab first slice of Stokes U/Q/COS2G
+    U = u[:,:,0]
+    Q = q[:,:,0]
+    COS = cos2g[:,:,0]
+
+    # Reduce B_los_map to only have nz measurements
+    # create array full of markers (-1) to say no Zeeman measurement here!
+    minBLOS = np.full_like(B_los_map, fill_value=-1)
+
+    nx, ny = B_los_map.shape[0], B_los_map.shape[1]
+    # For some user-specified number of zeeman measurements, fill in minBLOS based on BLOS
+    if nz <= 0:
+        'No Random Zeeman Measurements. Returning empty minBLOS map.'
+    else:
+        for it in range(nz):
+            rand_i = random.randint(0,nx-1)
+            rand_j = random.randint(0,ny-1)
+            minBLOS[rand_i][rand_j] = B_los_map[rand_i][rand_j]
+
+    # PLot BLOS, stokes U/Q, vectors
+    if plotting == 1:
+        # Plot B_los_map
+        fig, ax = plt.subplots(1,3, figsize=(12,4))
+        im0 = ax[0].imshow(B_los_map, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax[0].set_title(r'B$_{LOS}$ (z)')
+        ax[0].set_xlabel('x')
+        ax[0].set_ylabel('y')
+        plt.colorbar(im0, ax=ax[0],fraction=0.046, pad=0.04)
+
+        im1 = ax[1].imshow(minBLOS, origin='lower')#, extent=[x.min(), x.max(), y.min(), y.max()])
+        ax[1].set_title(r'Observed B$_{LOS}$ (z)')
+        ax[1].set_xlabel('x')
+        ax[1].set_ylabel('y')
+        plt.colorbar(im1, ax=ax[1],fraction=0.046, pad=0.04)
+
+        # plot stokes U and Q Map
+        X, Y = np.meshgrid(np.arange(U.shape[1]), np.arange(U.shape[0]), indexing='ij')
+        factor = 1 / np.max(COS)
+        # plot vectors
+        phi = 0.5 * np.arctan2(U, Q)
+        x_scaled = np.sin(phi) * COS * factor
+        y_scaled = np.cos(phi) * COS * factor
+
+        ax[2].set_title('Stokes U and Q Map')
+        ax[2].quiver(Y,X,y_scaled,x_scaled,scale=2, scale_units='xy', headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+        ax[2].set_xlabel('X')
+        ax[2].set_ylabel('Y')
+
+        plt.tight_layout()
+        plt.show()
+
+        step = 2
+        rf.visualize_3d(Bx[::step, ::step, ::step], By[::step, ::step, ::step], Bz[::step, ::step, ::step], name='Input Wavy Field',plotdex='ij')
+    
+    return U, Q, COS, minBLOS, Bx, By, Bz
+
+# U, Q, COS, B_los_map, Bx, By, Bz = wavy_zeeman_pol_min_vary(box_length=16,amplitude=1.2,frequency=1,z_vals=[1,2,3,4],nz=4,plotting=1)
+# U, Q, COS, B_los_map, Bx, By, Bz = wavy_zeeman_pol_min_vary(box_length=16,amplitude=1.2,frequency=1,z_vals=[1,2,3,4],nz=0,plotting=1)
 
 
 # ==================================================================# ==================================================================

@@ -6,7 +6,7 @@ from scipy.optimize import curve_fit
 from scipy.optimize import root_scalar
 from scipy.integrate import quad
 from scipy.signal import find_peaks
-
+from scipy.stats import norm
 
 #===============================================
 # class Parameter:
@@ -145,12 +145,12 @@ def methast(R,parvec,delta,dat,par): # Generic sampler. See usage par.EvalModel 
     par.EvalModel(theta[:,0]) # evaluate model for initial condition -- this is where prolonged value goes
     lik[0]     = dat.Likelihood(par) * par.Prior(theta[:,0]) # get likelihood (logarithm)
     u          = np.random.rand(R)
-    for r in range(1,R): # Only change and sample phi --> theta[1,r]
-        # while True: # need this to prevent issues with theta wrap-around
-        theta[1,r] = theta[1,r-1] + delta*(2*np.random.rand()-1.0) # delta step
-        theta[0,r] = theta[0,r-1]
-            # if (theta[0,r] >= 0.0 and theta[0,r] <= np.pi): # constrain theta between 0 and pi
-            #     break;
+
+    for r in range(1,R):
+        while True: # need this to prevent issues with theta wrap-around
+            theta[0,r] = theta[0,r-1] + delta*(2*np.random.rand()-1.0)
+            if (theta[0,r] >= 0.0 and theta[0,r] <= np.pi):
+                break;
         theta[1,r] = theta[1,r] % (2.0*np.pi) # constrain phi between 0 and 2pi
         par.EvalModel(theta[:,r]) # evaluate the model given the new parameters
         lik[r]     = dat.Likelihood(par) * par.Prior(theta[:,r])
@@ -158,6 +158,21 @@ def methast(R,parvec,delta,dat,par): # Generic sampler. See usage par.EvalModel 
             lik[r]     = lik[r-1]
             theta[:,r] = theta[:,r-1] # restore old values
     return theta,lik
+
+# previous 11242025
+    # for r in range(1,R): # Only change and sample phi --> theta[1,r]
+    #     # while True: # need this to prevent issues with theta wrap-around
+    #     theta[1,r] = theta[1,r-1] + delta*(2*np.random.rand()-1.0) # delta step for phi
+    #     theta[0,r] = theta[0,r-1] # don't step with theta
+    #         # if (theta[0,r] >= 0.0 and theta[0,r] <= np.pi): # constrain theta between 0 and pi
+    #         #     break;
+    #     theta[1,r] = theta[1,r] % (2.0*np.pi) # constrain phi between 0 and 2pi
+    #     par.EvalModel(theta[:,r]) # evaluate the model given the new parameters
+    #     lik[r]     = dat.Likelihood(par) * par.Prior(theta[:,r])
+    #     if u[r] > lik[r]/lik[r-1]: # "negative" acceptance: since new state is already saved, overwrite if not accepted
+    #         lik[r]     = lik[r-1]
+    #         theta[:,r] = theta[:,r-1] # restore old values
+    # return theta,lik
 
 
 
@@ -197,22 +212,48 @@ def mcmc_driver(data, prolonged, dtheta, dphi, rbins, R, nbins, ntrials, burn, p
                 iphi   = dat.phi0 # initialize phi, only sampling phi
                 # Set initial conditions for theta and phi 
                 parvec = np.array([itheta*np.pi/180.0,iphi*np.pi/180])
-                delta  = np.array([dphi])
+                # delta  = np.array([dphi])
+                delta  = np.array([dtheta])
 
-                # no looping through yet; just run one chain and plot mixing etc
-                # Sample Phi
-                theta,lik = methast(R,parvec,delta,dat,par)
+                pdict = np.zeros((ntrials))
 
-                # generate historgram of phi values
-                hist_phi, e = np.histogram(theta[1,burn:],bins=rbins,density=True) 
-                x           = 0.5*(e[:-1]+e[1:])
+                for itrial in range(ntrials): 
+                    # Sample Phi
+                    theta,lik = methast(R,parvec,delta,dat,par)
 
-                # find peak of histogram
-                phi_inds, phi_max = rf.peak(hist_phi)
-                phi_peak = x[phi_inds[phi_max]]
-                # print('[checkpoint]: Phi Peak = ', phi_peak, 'Theta = ', itheta)
+                    # generate historgram of phi values
+                    hist_theta, e = np.histogram(theta[0,burn:],bins=rbins,density=True) 
+                    x             = 0.5*(e[:-1]+e[1:])
 
-                bxr,byr,bzr = par.Reconstruct([itheta, phi_peak])
+                    # (theta_mu, theta_sigma) = norm.fit(theta[0,burn:])
+
+                    # find peak of histogram
+                    theta_inds, theta_max = rf.peak(hist_theta)
+                    theta_peak = x[theta_inds[theta_max]]
+                    # save peak
+                    pdict[itrial] = theta_peak
+
+                # make hist of peak thetas, find the peak, return that. 
+                thist, e     = np.histogram(pdict,bins=nbins,density=True)
+                tx           = 0.5*(e[:-1]+e[1:])
+                # fit hist of peaks
+                # (theta_mu, theta_sigma) = norm.fit(pdict)
+                # find peak of peaks
+                tpinds,tpmax = rf.peak(thist)
+                thepeak   = tx[tpinds[tpmax]]
+
+                print('[checkpoint]: Theta Gaussian Peak = ', thepeak, 'Phi = ', iphi)
+
+                # plot for testing
+                if plotting == 1:
+                    plt.plot(tx, thist)
+                    # y = norm.pdf(tx, theta_mu, theta_sigma)
+                    # plt.plot(tx, y, 'r--', linewidth=2)
+                    plt.axvline(thepeak)
+                    plt.title('Theta')
+                    plt.show()
+
+                bxr,byr,bzr = par.Reconstruct([thepeak, iphi])
 
                 br0[i][j][k] = bxr
                 br1[i][j][k] = byr
@@ -221,14 +262,17 @@ def mcmc_driver(data, prolonged, dtheta, dphi, rbins, R, nbins, ntrials, burn, p
     if plotting == 1:
             
         # plot last, most recent run, histogram with peak
-        plt.plot(x, hist_phi)
-        plt.title('Phi')
+        plt.plot(tx, thist)
+        # y = norm.pdf(tx, thepeak, theta_sigma)
+        # l = plt.plot(tx, y, 'r--', linewidth=2)
+        plt.axvline(thepeak)
+        plt.title('Theta')
         plt.show()
 
         # plot mixing
-        plt.plot(range(len(theta[1,burn:])), theta[1,burn:])
+        plt.plot(range(len(theta[0,burn:])), theta[0,burn:])
         plt.title('sampler mixing')
-        plt.ylabel('Phi')
+        plt.ylabel('Theta')
         plt.show()
 
                 ##############################
@@ -272,6 +316,8 @@ def mcmc_driver(data, prolonged, dtheta, dphi, rbins, R, nbins, ntrials, burn, p
     b22 = [br0,br1,br2]
 
     return b22
+
+
 
 def simple_mcmc(u, dtheta, dphi, bins, R, burn):
 
