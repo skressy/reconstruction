@@ -1,0 +1,13 @@
+# 2.5D Polar Reconstruction
+
+This folder contains tools for reconstructing magnetic fields from synthetic polarimetry observations.
+
+## Scripts
+
+- **2D_Recon.py** - Partially reconstructs a magnetic field from mock polarimetry observations
+- **recon_functions.py** - Contains reconstruction functions and plotting utilities
+- **data_gen.py** - Generates toy models as Stokes U/Q information from template magnetic fields
+
+## Overview
+
+The workflow generates synthetic magnetic field data, performs reconstruction analysis, and visualizes results using the provided utility functions.

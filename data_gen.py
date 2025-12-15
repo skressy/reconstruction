@@ -52,9 +52,9 @@ def wave_3d(amplitude, frequency, box_length, z_contribution, visual, plotdex):
 
     if visual == 1:
         rf.visualize_3d(bx, by, bz, name='Input Wavy Field',plotdex=plotdex)
-        rf.visual_UQ(u[0],q[0],label='Wavy Field',plotdex='ij')
+        rf.visual_UQ(u[:,:,0],q[:,:,0],label='Input Wavy Field',plotdex='ij')
     
-    UQMAP = [u[0], q[0], cos2g[0]]
+    UQMAP = [u[:,:,0], q[:,:,0], cos2g[:,:,0]]
     return  UQMAP 
 
 # uqc = wave_3d(amplitude=0.5, frequency=1, box_length=8, z_contribution=0.5, visual=1)

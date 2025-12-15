@@ -791,7 +791,7 @@ def visualize_gen_3D(X,Y,Z,bx,by,bz):
     plt.show()
 
 # -----------------------------------------------------------
-# GET THE FUCKING INDICES RIGHT BOY ##### DONT TOUCH!
+# visualize 2.5D field, varying XY, constant in Z
 # -----------------------------------------------------------
 def visualize_25d(bx, by, bz, name, plotdex):
     fig = plt.figure()
@@ -801,11 +801,6 @@ def visualize_25d(bx, by, bz, name, plotdex):
                           np.arange(bz.shape[0]), indexing=plotdex)
     
     ax.quiver(X,Y,Z,bx,by,bz,length=0.5, normalize=True, arrow_length_ratio=0, pivot='middle', color='dimgray')
-    # for i in range(X.shape[0]):
-    #     for j in range(Y.shape[0]):
-    #         ax.quiver(X[i][j], Y[i][j], Z[i][j], bx[i][j], by[i][j], bz[i][j], 
-    #                   length=0.5, normalize=True, 
-    #                   arrow_length_ratio=0, pivot='middle', color='dimgray')
     ax.set_xlabel('Bx')
     ax.set_ylabel('By')
     ax.set_zlabel('Bz')
@@ -824,7 +819,7 @@ def visual_UQ(U,Q,label,plotdex):
     phi = 0.5*np.arctan2(U,Q)
     x = np.cos(phi)
     y = np.sin(phi)
-    ax.quiver(X, Y, x, y, headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
+    ax.quiver(Y, X, y, x, headaxislength=0, headlength=0, headwidth=1, pivot='middle', color='blue')
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     plt.show()
