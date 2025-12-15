@@ -5,7 +5,7 @@ from scipy.optimize import curve_fit
 from scipy.optimize import root_scalar
 from scipy.integrate import quad
 from scipy.ndimage import convolve
-import more_functions as mf
+import back_up.more_functions as mf
 # from Reconstruction import multigrid
 
 # a place to put all functions for reconstruction script (that for the most part are finished)

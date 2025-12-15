@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import math
 import pyvista as pv
 from mpl_toolkits.mplot3d import Axes3D
-import recon_funcs as rf
+import back_up.recon_funcs as rf
 from scipy.special import jn_zeros, j0, j1, erfc
 import random
 

@@ -10,7 +10,7 @@
 # =======================================================
 import numpy as np
 import matplotlib.pyplot as plt
-import recon_funcs as rf
+import back_up.recon_funcs as rf
 from scipy.special import jn_zeros, j0, j1, erfc
 # ================================================
 # Generates 3D Uniform Field
