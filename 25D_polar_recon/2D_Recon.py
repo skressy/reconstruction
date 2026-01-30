@@ -8,7 +8,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import data_gen as dg
-import back_up.recon_funcs as rf
+import recon_funcs as rf
 
 # ------------------------------------------------------------------------------------
 def driver(): 
